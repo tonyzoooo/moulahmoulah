@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { formatPrice, getOrder, type Order, type OrderStatus } from "../api";
+import { captureOrder, formatPrice, getOrder, type Order, type OrderStatus } from "../api";
 
 const TERMINAL: OrderStatus[] = ["CAPTURED", "DECLINED", "FAILED"];
 
@@ -8,6 +8,7 @@ export default function Success() {
   const { orderId } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const captureFired = useRef(false);
 
   useEffect(() => {
     if (!orderId) return;
@@ -15,7 +16,14 @@ export default function Success() {
 
     const poll = async () => {
       try {
-        const o = await getOrder(orderId);
+        let o = await getOrder(orderId);
+        if (cancelled) return;
+        // Authorized but not yet captured (manual capture): trigger the
+        // acquirer capture step once, then keep polling.
+        if (o.status === "AUTHORIZED" && !captureFired.current) {
+          captureFired.current = true;
+          o = await captureOrder(orderId);
+        }
         if (cancelled) return;
         setOrder(o);
         if (!TERMINAL.includes(o.status)) {
@@ -32,9 +40,16 @@ export default function Success() {
     };
   }, [orderId]);
 
+  const heading =
+    order?.status === "CAPTURED"
+      ? "Payment captured"
+      : order?.status === "AUTHORIZED"
+        ? "Authorized — capturing…"
+        : "Payment in progress";
+
   return (
     <main>
-      <h1>{order?.status === "CAPTURED" ? "Payment captured" : "Payment in progress"}</h1>
+      <h1>{heading}</h1>
       {error && <p className="error">{error}</p>}
       {order && (
         <div className="card">

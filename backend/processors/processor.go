@@ -33,6 +33,15 @@ type PaymentRequest struct {
 	Description string
 	SuccessURL  string
 	CancelURL   string
+	// Metadata is attached to the payment object the processor creates
+	// (e.g. the Stripe PaymentIntent). Values must be strings.
+	Metadata map[string]string
+	// StatementDescriptor is the short text appended to the card statement
+	// (sent as statement_descriptor_suffix, the variant cards support).
+	StatementDescriptor string
+	// CaptureManual requests authorize-only (manual capture), so the payment
+	// moves CREATED -> AUTHORIZED and is captured later via Capture.
+	CaptureManual bool
 }
 
 // PaymentResult is what a processor returns right after creating a payment.
@@ -48,6 +57,8 @@ type Processor interface {
 	Label() string
 	CreatePayment(req PaymentRequest) (PaymentResult, error)
 	GetStatus(providerRef string) (Status, error)
+	// Capture captures a previously authorized payment.
+	Capture(providerRef string) error
 }
 
 var (

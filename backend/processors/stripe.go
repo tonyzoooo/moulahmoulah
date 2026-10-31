@@ -49,7 +49,22 @@ func (p *StripeProcessor) CreatePayment(req PaymentRequest) (PaymentResult, erro
 	form.Set("line_items[0][price_data][product_data][name]", req.Description)
 	form.Set("success_url", req.SuccessURL)
 	form.Set("cancel_url", req.CancelURL)
-	form.Set("metadata[order_id]", req.OrderID)
+	// Fill the PaymentIntent that Checkout creates: description, statement
+	// descriptor, capture method, and metadata all go through
+	// payment_intent_data so they land on the PI itself.
+	form.Set("payment_intent_data[description]", req.Description)
+	if req.StatementDescriptor != "" {
+		// Card payments only allow the suffix variant on a PaymentIntent.
+		form.Set("payment_intent_data[statement_descriptor_suffix]", req.StatementDescriptor)
+	}
+	if req.CaptureManual {
+		form.Set("payment_intent_data[capture_method]", "manual")
+	}
+	// Metadata goes on both the Checkout Session and the PaymentIntent.
+	for k, v := range req.Metadata {
+		form.Set("metadata["+k+"]", v)
+		form.Set("payment_intent_data[metadata]["+k+"]", v)
+	}
 
 	var session struct {
 		ID  string `json:"id"`
@@ -61,24 +76,66 @@ func (p *StripeProcessor) CreatePayment(req PaymentRequest) (PaymentResult, erro
 	return PaymentResult{ProviderRef: session.ID, RedirectURL: session.URL}, nil
 }
 
-// GetStatus retrieves the Checkout Session and maps it to a normalized Status.
+// GetStatus retrieves the Checkout Session and its PaymentIntent, mapping the
+// PaymentIntent status to a normalized Status (the PI is the source of truth).
 func (p *StripeProcessor) GetStatus(providerRef string) (Status, error) {
 	var session struct {
 		Status        string `json:"status"`         // open | complete | expired
 		PaymentStatus string `json:"payment_status"` // paid | unpaid | no_payment_required
+		PaymentIntent string `json:"payment_intent"` // pi_...
 	}
 	path := "/checkout/sessions/" + url.PathEscape(providerRef)
 	if err := p.call(http.MethodGet, path, nil, &session); err != nil {
 		return "", err
 	}
-	switch {
-	case session.Status == "complete" && session.PaymentStatus == "paid":
-		return StatusCaptured, nil
-	case session.Status == "expired":
+	if session.Status == "expired" {
 		return StatusFailed, nil
-	default:
-		return StatusCreated, nil
 	}
+
+	if session.PaymentIntent != "" {
+		var pi struct {
+			Status string `json:"status"`
+		}
+		piPath := "/payment_intents/" + url.PathEscape(session.PaymentIntent)
+		if err := p.call(http.MethodGet, piPath, nil, &pi); err == nil {
+			switch pi.Status {
+			case "succeeded":
+				return StatusCaptured, nil
+			case "requires_capture":
+				return StatusAuthorized, nil
+			case "canceled":
+				return StatusFailed, nil
+			default: // requires_payment_method, requires_confirmation, processing
+				return StatusCreated, nil
+			}
+		}
+	}
+
+	if session.Status == "complete" && session.PaymentStatus == "paid" {
+		return StatusCaptured, nil
+	}
+	return StatusCreated, nil
+}
+
+// Capture captures the PaymentIntent behind a Checkout Session
+// (providerRef is the session id "cs_...").
+func (p *StripeProcessor) Capture(providerRef string) error {
+	var session struct {
+		PaymentIntent string `json:"payment_intent"`
+	}
+	path := "/checkout/sessions/" + url.PathEscape(providerRef)
+	if err := p.call(http.MethodGet, path, nil, &session); err != nil {
+		return err
+	}
+	if session.PaymentIntent == "" {
+		return fmt.Errorf("no payment intent on session %s", providerRef)
+	}
+	var pi struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+	}
+	capturePath := "/payment_intents/" + url.PathEscape(session.PaymentIntent) + "/capture"
+	return p.call(http.MethodPost, capturePath, url.Values{}, &pi)
 }
 
 // call performs an authenticated Stripe API request. Form values are sent

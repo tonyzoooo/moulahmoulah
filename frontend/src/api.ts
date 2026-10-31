@@ -54,6 +54,10 @@ export function getOrder(id: string): Promise<Order> {
   return request<Order>(`/api/orders/${id}`);
 }
 
+export function captureOrder(id: string): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/capture`, { method: "POST" });
+}
+
 export function formatPrice(minorUnits: number, currency: string): string {
   const major = (minorUnits / 100).toFixed(2);
   return currency.toLowerCase() === "eur" ? `€${major}` : `${major} ${currency.toUpperCase()}`;

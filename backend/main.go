@@ -30,6 +30,7 @@ func main() {
 	mux.HandleFunc("GET /api/catalog", handleCatalog)
 	mux.HandleFunc("POST /api/checkout", handleCheckout)
 	mux.HandleFunc("GET /api/orders/{id}", handleOrder)
+	mux.HandleFunc("POST /api/orders/{id}/capture", handleCapture)
 	mux.HandleFunc("/", spaHandler())
 
 	addr := ":3000"

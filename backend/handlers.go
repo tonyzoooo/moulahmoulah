@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -89,12 +91,15 @@ func handleCheckout(w http.ResponseWriter, r *http.Request) {
 
 	base := baseURL(r)
 	result, err := proc.CreatePayment(processors.PaymentRequest{
-		OrderID:     orderID,
-		Currency:    order.Currency,
-		Amount:      order.Amount,
-		Description: describeItems(items),
-		SuccessURL:  fmt.Sprintf("%s/success/%s?session_id={CHECKOUT_SESSION_ID}", base, orderID),
-		CancelURL:   fmt.Sprintf("%s/failure/%s", base, orderID),
+		OrderID:             orderID,
+		Currency:            order.Currency,
+		Amount:              order.Amount,
+		Description:         describeItems(items),
+		SuccessURL:          fmt.Sprintf("%s/success/%s?session_id={CHECKOUT_SESSION_ID}", base, orderID),
+		CancelURL:           fmt.Sprintf("%s/failure/%s", base, orderID),
+		Metadata:            metadataForOrder(orderID, items, amount, order.Currency),
+		StatementDescriptor: "MOULAHMOULAH",
+		CaptureManual:       true,
 	})
 	if err != nil {
 		store.update(orderID, "", processors.StatusFailed)
@@ -127,6 +132,34 @@ func handleOrder(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, order)
 }
 
+// handleCapture captures an authorized payment (acquirer capture step).
+func handleCapture(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	order, ok := store.get(id)
+	if !ok {
+		writeError(w, http.StatusNotFound, "order not found")
+		return
+	}
+	if order.ProviderRef == "" {
+		writeError(w, http.StatusBadRequest, "order has no payment yet")
+		return
+	}
+	proc, err := processors.Get(order.ProcessorID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := proc.Capture(order.ProviderRef); err != nil {
+		writeError(w, http.StatusBadGateway, "capture failed: "+err.Error())
+		return
+	}
+	if status, err := proc.GetStatus(order.ProviderRef); err == nil {
+		store.update(id, order.ProviderRef, status)
+		order, _ = store.get(id)
+	}
+	writeJSON(w, http.StatusOK, order)
+}
+
 func newOrderID() string {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
@@ -154,4 +187,30 @@ func describeItems(items []Product) string {
 		return items[0].Name
 	}
 	return fmt.Sprintf("%d items", len(items))
+}
+
+// metadataForOrder builds the key-value metadata attached to the payment
+// object (e.g. the Stripe PaymentIntent). Stripe metadata values are strings
+// and capped at 500 chars, so the item list is truncated if needed.
+func metadataForOrder(orderID string, items []Product, amount int64, currency string) map[string]string {
+	counts := map[string]int{}
+	for _, it := range items {
+		counts[it.ID]++
+	}
+	parts := make([]string, 0, len(counts))
+	for id, n := range counts {
+		parts = append(parts, fmt.Sprintf("%s x%d", id, n))
+	}
+	sort.Strings(parts)
+	itemList := strings.Join(parts, ",")
+	if len(itemList) > 450 {
+		itemList = itemList[:450]
+	}
+	return map[string]string{
+		"order_id":   orderID,
+		"items":      itemList,
+		"item_count": strconv.Itoa(len(items)),
+		"amount":     strconv.FormatInt(amount, 10),
+		"currency":   currency,
+	}
 }

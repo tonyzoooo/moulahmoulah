@@ -107,6 +107,14 @@ BASE_URL=http://localhost:3000 STRIPE_SECRET_KEY=sk_test_... ./moulahmoulah
 | GET | `/api/catalog` | Product catalog (prices in minor units) |
 | POST | `/api/checkout` | `{processorId, items}` → `{orderId, url}` — redirect the customer to `url` |
 | GET | `/api/orders/{id}` | Order with live status refreshed from the processor |
+| POST | `/api/orders/{id}/capture` | Capture an authorized payment (AUTHORIZED → CAPTURED) |
+
+Stripe sessions are created with `capture_method=manual`, so a successful
+checkout leaves the PaymentIntent in `requires_capture` (AUTHORIZED); the
+success page then calls the capture endpoint. The PaymentIntent is filled via
+`payment_intent_data`: `description`, `statement_descriptor_suffix`
+(`MOULAHMOULAH`), and metadata (`order_id`, `items`, `item_count`, `amount`,
+`currency`).
 
 ## Processor interface
 
@@ -116,6 +124,7 @@ type Processor interface {
     Label() string
     CreatePayment(req PaymentRequest) (PaymentResult, error)
     GetStatus(providerRef string) (Status, error)
+    Capture(providerRef string) error
 }
 ```
 
