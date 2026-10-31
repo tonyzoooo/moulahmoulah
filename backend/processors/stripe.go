@@ -53,6 +53,9 @@ func (p *StripeProcessor) CreatePayment(req PaymentRequest) (PaymentResult, erro
 	// descriptor, capture method, and metadata all go through
 	// payment_intent_data so they land on the PI itself.
 	form.Set("payment_intent_data[description]", req.Description)
+	// Note: return_url is a confirm-time parameter for API-confirmed
+	// PaymentIntents (Payment Element), not a Checkout Session parameter —
+	// hosted Checkout redirects via success_url instead.
 	if req.StatementDescriptor != "" {
 		// Card payments only allow the suffix variant on a PaymentIntent.
 		form.Set("payment_intent_data[statement_descriptor_suffix]", req.StatementDescriptor)
