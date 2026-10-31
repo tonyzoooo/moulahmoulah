@@ -43,10 +43,25 @@ func (p *StripeProcessor) CreatePayment(req PaymentRequest) (PaymentResult, erro
 
 	form := url.Values{}
 	form.Set("mode", "payment")
-	form.Set("line_items[0][quantity]", "1")
-	form.Set("line_items[0][price_data][currency]", req.Currency)
-	form.Set("line_items[0][price_data][unit_amount]", fmt.Sprintf("%d", req.Amount))
-	form.Set("line_items[0][price_data][product_data][name]", req.Description)
+	if len(req.LineItems) > 0 {
+		// One line per cart item, with product name and image, so the hosted
+		// checkout page shows the actual basket.
+		for i, item := range req.LineItems {
+			prefix := fmt.Sprintf("line_items[%d]", i)
+			form.Set(prefix+"[quantity]", fmt.Sprintf("%d", item.Quantity))
+			form.Set(prefix+"[price_data][currency]", req.Currency)
+			form.Set(prefix+"[price_data][unit_amount]", fmt.Sprintf("%d", item.Amount))
+			form.Set(prefix+"[price_data][product_data][name]", item.Name)
+			if item.ImageURL != "" {
+				form.Set(prefix+"[price_data][product_data][images][0]", item.ImageURL)
+			}
+		}
+	} else {
+		form.Set("line_items[0][quantity]", "1")
+		form.Set("line_items[0][price_data][currency]", req.Currency)
+		form.Set("line_items[0][price_data][unit_amount]", fmt.Sprintf("%d", req.Amount))
+		form.Set("line_items[0][price_data][product_data][name]", req.Description)
+	}
 	form.Set("success_url", req.SuccessURL)
 	form.Set("cancel_url", req.CancelURL)
 	// Fill the PaymentIntent that Checkout creates: description, statement

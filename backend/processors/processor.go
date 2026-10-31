@@ -42,6 +42,17 @@ type PaymentRequest struct {
 	// CaptureManual requests authorize-only (manual capture), so the payment
 	// moves CREATED -> AUTHORIZED and is captured later via Capture.
 	CaptureManual bool
+	// LineItems are the individual cart lines, used to render the hosted
+	// checkout page. When empty, Description + Amount are used as one line.
+	LineItems []LineItem
+}
+
+// LineItem is one cart line on a hosted checkout page.
+type LineItem struct {
+	Name     string
+	Amount   int64 // unit price in minor units
+	Quantity int64
+	ImageURL string
 }
 
 // PaymentResult is what a processor returns right after creating a payment.

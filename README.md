@@ -69,7 +69,9 @@ moulahmoulah/
 
 ## Products
 
-The catalog is **real product data from the [Open Food Facts](https://world.openfoodfacts.org) API** (barcode, name, brand, size, image). OFF has no prices, so each product gets a stable synthetic EUR price: the quantity ("1,5 L", "500 g") is parsed and multiplied by a per-kg/per-L rate derived from the barcode (€0.20–€4.00 per unit, rounded to 50 cents) — so a 33 cl water costs about €0.50–1.50, not €16. The catalog is fetched once and cached to `backend/data/catalog.json` (gitignored, versioned) — restarts load from the cache and never refetch; delete the file (or bump the cache version) to refetch.
+The catalog is **real product data from the [Open Food Facts](https://world.openfoodfacts.org) API** (barcode, name, brand, size, image), and **real prices from the [Open Prices](https://prices.openfoodfacts.org) API** (user-contributed in-store prices; most recent EUR price per barcode wins — e.g. Coca-Cola 1 L ≈ €1.79). Products without a recorded price fall back to a stable synthetic price: the quantity ("1,5 L", "500 g") is parsed and multiplied by a per-kg/per-L rate derived from the barcode. The `priceSource` field on each product says which one it is. The catalog is fetched once and cached to `backend/data/catalog.json` (gitignored, versioned) — restarts load from the cache and never refetch; delete the file (or bump the cache version) to refetch.
+
+The Stripe Checkout page renders one line per basket item (name, image, unit price, quantity) instead of a single aggregated line.
 
 ## Quick start
 
@@ -109,12 +111,13 @@ BASE_URL=http://localhost:3000 STRIPE_SECRET_KEY=sk_test_... ./moulahmoulah
 | GET | `/api/orders/{id}` | Order with live status refreshed from the processor |
 | POST | `/api/orders/{id}/capture` | Capture an authorized payment (AUTHORIZED → CAPTURED) |
 
-Stripe sessions are created with `capture_method=manual`, so a successful
-checkout leaves the PaymentIntent in `requires_capture` (AUTHORIZED); the
-success page then calls the capture endpoint. The PaymentIntent is filled via
-`payment_intent_data`: `description`, `statement_descriptor_suffix`
-(`MOULAHMOULAH`), and metadata (`order_id`, `items`, `item_count`, `amount`,
-`currency`).
+Stripe sessions are created with **automatic capture** so the hosted page
+redirects to `success_url` right after payment (with `capture_method=manual`
+the session completes but stays unpaid and Checkout does not redirect). The
+PaymentIntent is filled via `payment_intent_data`: `description`,
+`statement_descriptor_suffix` (`MOULAHMOULAH`), and metadata (`order_id`,
+`items`, `item_count`, `amount`, `currency`). `POST /api/orders/{id}/capture`
+still exists for PIs that end up in `requires_capture` (AUTHORIZED).
 
 ## Processor interface
 

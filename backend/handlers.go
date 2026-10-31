@@ -99,7 +99,11 @@ func handleCheckout(w http.ResponseWriter, r *http.Request) {
 		CancelURL:           fmt.Sprintf("%s/failure/%s", base, orderID),
 		Metadata:            metadataForOrder(orderID, items, amount, order.Currency),
 		StatementDescriptor: "MOULAHMOULAH",
-		CaptureManual:       true,
+		// Automatic capture: the hosted page redirects to success_url right
+		// after payment. (Manual capture leaves the session "complete" but
+		// unpaid and Checkout does not redirect.)
+		CaptureManual: false,
+		LineItems:     lineItemsFor(req.Items),
 	})
 	if err != nil {
 		store.update(orderID, "", processors.StatusFailed)
@@ -180,6 +184,32 @@ func baseURL(r *http.Request) string {
 		return v
 	}
 	return "http://localhost:5173"
+}
+
+// lineItemsFor groups the cart (product id -> quantity) into checkout line
+// items, sorted by product id for stable ordering.
+func lineItemsFor(cart map[string]int) []processors.LineItem {
+	ids := make([]string, 0, len(cart))
+	for id, qty := range cart {
+		if qty > 0 {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	items := make([]processors.LineItem, 0, len(ids))
+	for _, id := range ids {
+		p, ok := findProduct(id)
+		if !ok {
+			continue
+		}
+		items = append(items, processors.LineItem{
+			Name:     p.Name,
+			Amount:   p.Price,
+			Quantity: int64(cart[id]),
+			ImageURL: p.ImageURL,
+		})
+	}
+	return items
 }
 
 func describeItems(items []Product) string {
