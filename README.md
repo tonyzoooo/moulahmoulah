@@ -69,7 +69,7 @@ moulahmoulah/
 
 ## Products
 
-The catalog is **real product data from the [Open Food Facts](https://world.openfoodfacts.org) API** (barcode, name, brand, size, image). OFF has no prices, so each product gets a stable fake price in EUR derived from its barcode. The catalog is fetched once and cached to `backend/data/catalog.json` (gitignored) — restarts load from the cache and never refetch; delete the file to refetch.
+The catalog is **real product data from the [Open Food Facts](https://world.openfoodfacts.org) API** (barcode, name, brand, size, image). OFF has no prices, so each product gets a stable synthetic EUR price: the quantity ("1,5 L", "500 g") is parsed and multiplied by a per-kg/per-L rate derived from the barcode (€0.20–€4.00 per unit, rounded to 50 cents) — so a 33 cl water costs about €0.50–1.50, not €16. The catalog is fetched once and cached to `backend/data/catalog.json` (gitignored, versioned) — restarts load from the cache and never refetch; delete the file (or bump the cache version) to refetch.
 
 ## Quick start
 
