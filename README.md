@@ -130,3 +130,7 @@ Adding another processor (Adyen, PayPal, Mollie…) = adding one file to
 
 - Test/sandbox credentials only — never commit live keys.
 - Demo code: not production-hardened. Real payments require PCI review, idempotency keys, retries, reconciliation, and more.
+
+## License
+
+[MIT](LICENSE) — Copyright (c) 2026 tonyzoooo
