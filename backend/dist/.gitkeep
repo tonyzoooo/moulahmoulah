@@ -1,0 +1,2 @@
+# Placeholder so `go:embed all:dist` compiles before `make build` copies the
+# real frontend build here. `make build` overwrites this directory.
