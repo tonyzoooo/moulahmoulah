@@ -31,7 +31,7 @@ type Product struct {
 
 const (
 	catalogCachePath    = "data/catalog.json"
-	catalogCacheVersion = 3 // bump to invalidate the on-disk cache
+	catalogCacheVersion = 4 // bump to invalidate the on-disk cache
 	offSearchURL        = "https://world.openfoodfacts.org/api/v2/search"
 	openPricesURL       = "https://prices.openfoodfacts.org/api/v1/prices"
 	catalogPageSize     = 24
@@ -131,16 +131,11 @@ func fetchOpenFoodFacts() []Product {
 		if p.Code == "" || p.ProductName == "" {
 			continue
 		}
-		price, unitLabel := priceForProduct(p.Code, p.Quantity)
-		parts := []string{firstBrand(p.Brands), p.Quantity}
-		if unitLabel != "" {
-			parts = append(parts, unitLabel)
-		}
 		products = append(products, Product{
 			ID:          p.Code,
 			Name:        p.ProductName,
-			Description: strings.TrimSpace(strings.Join(parts, " — ")),
-			Price:       price,
+			Description: strings.TrimSpace(strings.Join([]string{firstBrand(p.Brands), p.Quantity}, " — ")),
+			Price:       priceForProduct(p.Code, p.Quantity),
 			Currency:    "eur",
 			ImageURL:    p.ImageFrontSmallURL,
 			PriceSource: "synthetic",
@@ -246,15 +241,15 @@ func firstBrand(brands string) string {
 // priceForProduct derives a stable synthetic price (EUR cents) from the
 // barcode and the product size, used when Open Prices has no real price.
 // A stable per-kg/per-L rate (derived from the barcode) is applied to the
-// parsed quantity. Returns the price and a "€/kg" / "€/L" label.
-func priceForProduct(code, quantity string) (int64, string) {
+// parsed quantity.
+func priceForProduct(code, quantity string) int64 {
 	h := fnv.New64a()
 	h.Write([]byte(code))
 	sum := h.Sum64()
 
-	amount, unit := parseQuantity(quantity) // amount in g or ml
+	amount, _ := parseQuantity(quantity) // amount in g or ml
 	if amount <= 0 {
-		return 150 + int64(sum%7)*50, "" // no parseable size: flat small price
+		return 150 + int64(sum%7)*50 // no parseable size: flat small price
 	}
 
 	perKgOrL := 20 + int64(sum%381) // €0.20 .. €4.00 per kg / L
@@ -264,11 +259,7 @@ func priceForProduct(code, quantity string) (int64, string) {
 	if price < 50 {
 		price = 50
 	}
-	label := fmt.Sprintf("€%.2f/kg", float64(perKgOrL)/100)
-	if unit == "ml" {
-		label = fmt.Sprintf("€%.2f/L", float64(perKgOrL)/100)
-	}
-	return price, label
+	return price
 }
 
 // parseQuantity extracts a mass/volume from an OFF quantity string such as
