@@ -48,7 +48,7 @@ moulahmoulah/
 │   ├── go.mod
 │   ├── main.go               # net/http server, routes, SPA static serving
 │   ├── handlers.go           # /api/catalog, /api/checkout, /api/orders/:id
-│   ├── catalog.go            # products in EUR (minor units)
+│   ├── catalog.go            # products from Open Food Facts + disk cache
 │   ├── store.go              # in-memory order store (+mutex)
 │   └── processors/
 │       ├── processor.go      # Processor interface + registry
@@ -66,6 +66,10 @@ moulahmoulah/
 ├── Makefile
 └── .env.example
 ```
+
+## Products
+
+The catalog is **real product data from the [Open Food Facts](https://world.openfoodfacts.org) API** (barcode, name, brand, size, image). OFF has no prices, so each product gets a stable fake price in EUR derived from its barcode. The catalog is fetched once and cached to `backend/data/catalog.json` (gitignored) — restarts load from the cache and never refetch; delete the file to refetch.
 
 ## Quick start
 

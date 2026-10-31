@@ -50,8 +50,16 @@ h1 {
   padding: 1rem 1.25rem;
 }
 
+.thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--border);
+}
+
 .card h2 {
-  margin: 0 0 0.25rem;
+  margin: 0.5rem 0 0.25rem;
   font-size: 1.1rem;
 }
 

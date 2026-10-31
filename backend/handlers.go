@@ -25,7 +25,7 @@ func writeError(w http.ResponseWriter, code int, msg string) {
 
 // handleCatalog returns the product catalog.
 func handleCatalog(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, catalog)
+	writeJSON(w, http.StatusOK, getCatalog())
 }
 
 type checkoutRequest struct {

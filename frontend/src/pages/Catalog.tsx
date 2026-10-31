@@ -49,6 +49,7 @@ export default function Catalog() {
       <section className="grid">
         {products.map((p) => (
           <article key={p.id} className="card">
+            {p.imageUrl && <img src={p.imageUrl} alt={p.name} className="thumb" loading="lazy" />}
             <h2>{p.name}</h2>
             <p>{p.description}</p>
             <p className="price">{formatPrice(p.price, p.currency)}</p>

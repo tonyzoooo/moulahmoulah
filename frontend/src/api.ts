@@ -1,10 +1,11 @@
 export interface Product {
-  id: string;
+  id: string; // Open Food Facts barcode
   name: string;
   description: string;
   /** Price in minor units (cents for EUR). */
   price: number;
   currency: string;
+  imageUrl?: string;
 }
 
 export type OrderStatus = "CREATED" | "AUTHORIZED" | "CAPTURED" | "DECLINED" | "FAILED";

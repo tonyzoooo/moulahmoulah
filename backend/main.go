@@ -23,6 +23,9 @@ func main() {
 	// Register the available processors. Stripe only, for now.
 	processors.NewStripeProcessor()
 
+	// Load the product catalog (Open Food Facts, cached on disk).
+	setCatalog(loadCatalog())
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/catalog", handleCatalog)
 	mux.HandleFunc("POST /api/checkout", handleCheckout)
