@@ -49,18 +49,22 @@ export default function Success() {
 
   return (
     <main>
-      <h1>{heading}</h1>
-      {error && <p className="error">{error}</p>}
+      <h1 data-testid="payment-heading">{heading}</h1>
+      {error && (
+        <p className="error" data-testid="error">
+          {error}
+        </p>
+      )}
       {order && (
         <div className="card">
           <p>
-            Order <code>{order.id}</code>
+            Order <code data-testid="order-id">{order.id}</code>
           </p>
-          <p>
+          <p data-testid="order-amount">
             {formatPrice(order.amount, order.currency)} via {order.processorId}
           </p>
           <p>
-            Status: <strong>{order.status}</strong>
+            Status: <strong data-testid="order-status">{order.status}</strong>
           </p>
         </div>
       )}

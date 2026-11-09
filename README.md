@@ -61,7 +61,10 @@ moulahmoulah/
 │       ├── App.tsx
 │       ├── api.ts            # typed fetch client
 │       ├── styles.css
-│       └── pages/            # Catalog, Success, Failure
+│       └── pages/            # Catalog, Success, Failure (all keyed by data-testid)
+├── e2e/                      # Playwright end-to-end payment tests
+│   ├── playwright.config.ts  # starts backend + Vite itself, records video
+│   └── tests/                # checkout.spec.ts + Stripe hosted-page helper
 ├── biome.json
 ├── Makefile
 └── .env.example
@@ -101,6 +104,31 @@ Production: a single binary serves everything.
 make build
 BASE_URL=http://localhost:3000 STRIPE_SECRET_KEY=sk_test_... ./moulahmoulah
 ```
+
+## E2E tests (Playwright)
+
+`e2e/` drives a real payment in a browser, all the way through Stripe test mode:
+
+```
+basket → Pay with Stripe → checkout.stripe.com (test card 4242…) → /success/:id (CAPTURED)
+```
+
+```bash
+make e2e          # installs deps + chromium, then runs the suite
+make e2e-headed   # watch it run in a visible browser
+```
+
+The Playwright config starts both servers itself — Go backend on :3000 (with
+`STRIPE_SECRET_KEY` read from the repo-root `.env`) and Vite on :5173 — and
+reuses them if they are already running. Selectors only use the `data-testid`
+attributes in the React app (`add-to-basket-<id>`, `pay-stripe`, `cart-total`,
+`payment-heading`, `order-status`, …), never CSS classes, so markup changes
+don't break the tests.
+
+Every run is **recorded to video** (default `E2E_VIDEO=on`) into
+`e2e/test-results/<spec>/<test>/video.webm`; set `E2E_VIDEO=off` or
+`E2E_VIDEO=retain-on-failure` to change that. The HTML report lands in
+`e2e/playwright-report/` — view it with `cd e2e && npm run report`.
 
 ## API
 

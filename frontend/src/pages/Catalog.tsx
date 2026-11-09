@@ -71,21 +71,25 @@ export default function Catalog() {
             A payment walked all the way through the chain. No real money moves.
           </p>
         </div>
-        <div className="cart-badge" aria-live="polite">
+        <div className="cart-badge" aria-live="polite" data-testid="cart-badge">
           Basket: {count} {count === 1 ? "item" : "items"}
         </div>
       </header>
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" data-testid="error">
+          {error}
+        </p>
+      )}
 
       <div className="shop-layout">
         <section className="grid">
           {products.map((p) => (
-            <article key={p.id} className="card">
+            <article key={p.id} className="card" data-testid="product-card" data-product-id={p.id}>
               {p.imageUrl && <img src={p.imageUrl} alt={p.name} className="thumb" loading="lazy" />}
               <h2>{p.name}</h2>
               <p>{p.description}</p>
               <p className="price">{formatPrice(p.price, p.currency)}</p>
-              <button type="button" onClick={() => add(p.id)}>
+              <button type="button" data-testid={`add-to-basket-${p.id}`} onClick={() => add(p.id)}>
                 {cart[p.id] ? `Add to basket (${cart[p.id]})` : "Add to basket"}
               </button>
             </article>
@@ -97,7 +101,12 @@ export default function Catalog() {
           {lines.length === 0 && <p className="muted">Your basket is empty.</p>}
           <ul className="cart-lines">
             {lines.map(({ product, qty }) => (
-              <li key={product.id} className="cart-line">
+              <li
+                key={product.id}
+                className="cart-line"
+                data-testid="cart-line"
+                data-product-id={product.id}
+              >
                 {product.imageUrl && (
                   <img src={product.imageUrl} alt={product.name} className="cart-thumb" />
                 )}
@@ -109,26 +118,29 @@ export default function Catalog() {
                   <button
                     type="button"
                     aria-label={`Decrease ${product.name}`}
+                    data-testid={`qty-decrease-${product.id}`}
                     onClick={() => setQty(product.id, qty - 1)}
                   >
                     −
                   </button>
-                  <span>{qty}</span>
+                  <span data-testid={`qty-value-${product.id}`}>{qty}</span>
                   <button
                     type="button"
                     aria-label={`Increase ${product.name}`}
+                    data-testid={`qty-increase-${product.id}`}
                     onClick={() => setQty(product.id, qty + 1)}
                   >
                     +
                   </button>
                 </div>
-                <span className="cart-line-total">
+                <span className="cart-line-total" data-testid={`cart-line-total-${product.id}`}>
                   {formatPrice(product.price * qty, product.currency)}
                 </span>
                 <button
                   type="button"
                   className="remove"
                   aria-label={`Remove ${product.name}`}
+                  data-testid={`remove-${product.id}`}
                   onClick={() => remove(product.id)}
                 >
                   ×
@@ -138,7 +150,7 @@ export default function Catalog() {
           </ul>
           {lines.length > 0 && (
             <>
-              <p className="cart-total">
+              <p className="cart-total" data-testid="cart-total">
                 Total: <strong>{formatPrice(total, "eur")}</strong> ({count}{" "}
                 {count === 1 ? "item" : "items"})
               </p>
@@ -147,6 +159,7 @@ export default function Catalog() {
                   key={p.id}
                   type="button"
                   className="pay"
+                  data-testid={`pay-${p.id}`}
                   disabled={busy}
                   onClick={() => pay(p.id)}
                 >

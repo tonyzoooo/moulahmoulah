@@ -5,10 +5,11 @@ export default function Failure() {
 
   return (
     <main>
-      <h1>Payment not completed</h1>
+      <h1 data-testid="failure-heading">Payment not completed</h1>
       <div className="card">
         <p>
-          Order <code>{orderId}</code> was cancelled or failed. No money was moved.
+          Order <code data-testid="order-id">{orderId}</code> was cancelled or failed. No money was
+          moved.
         </p>
       </div>
       <p>

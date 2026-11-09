@@ -5,3 +5,9 @@ backend/dist/*
 backend/data/
 moulahmoulah
 .env
+
+# Playwright e2e artifacts
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
